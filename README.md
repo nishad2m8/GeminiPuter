@@ -20,4 +20,4 @@ Check how to video : https://youtu.be/nPhUH_USQq4
 
 ![alt text](Elements/GeminiPuter.gif)
 
-Gemini AI chat capabilities on an Cardputer using LVGL.
+Gemini AI chat capabilities on Cardputer using LVGL. Connect to the `GeminiPuter-Setup` captive portal to set up Wi-Fi and API. You can get Google Gemini API at https://aistudio.google.com/app/apikey
