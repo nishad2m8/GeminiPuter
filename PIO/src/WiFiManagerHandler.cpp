@@ -2,9 +2,11 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <ESPAsyncWebServer.h>
-#include <SPIFFS.h>
+#include <Preferences.h> 
 #include <Arduino.h>
 #include "ui.h"
+
+Preferences preferences;  // Create an instance of Preferences
 
 // Initialize WebServer and Global Variables
 AsyncWebServer server(80);
@@ -107,47 +109,35 @@ void startWebServer() {
     Serial.println("WebServer started successfully.");
 }
 
-
-
-// Save API Key to SPIFFS and return success status
+// Save API Key to NVS and return success status
 bool saveApiKey(const String &apiKey) {
-    if (!SPIFFS.begin(true)) {
-        Serial.println("SPIFFS initialization failed!");
-        return false;
-    }
+    preferences.begin("config", false); // Open "config" namespace in NVS
 
-    File file = SPIFFS.open("/apikey.txt", FILE_WRITE);
-    if (!file) {
-        Serial.println("Failed to open file for writing");
-        return false;
-    }
+    bool success = preferences.putString("apikey", apiKey); // Save API key under "apikey"
+    preferences.end(); // Close the NVS namespace
 
-    if (file.print(apiKey)) {
-        Serial.println("API Key saved successfully.");
-        file.close();
-        return true;
+    if (success) {
+        Serial.println("API Key saved successfully in NVS.");
     } else {
-        Serial.println("Failed to write API Key.");
-        file.close();
-        return false;
+        Serial.println("Failed to save API Key in NVS.");
     }
+
+    return success;
 }
 
-// Retrieve Stored API Key from SPIFFS
+// Retrieve Stored API Key from NVS
 String getStoredApiKey() {
-    if (!SPIFFS.begin(true)) {
-        Serial.println("SPIFFS initialization failed!");
-        return "";
+    preferences.begin("config", true); // Open "config" namespace in read-only mode
+
+    String apiKey = preferences.getString("apikey", ""); // Retrieve the API key, defaulting to an empty string if not found
+    preferences.end(); // Close the NVS namespace
+
+    if (apiKey.isEmpty()) {
+        Serial.println("No API Key stored in NVS.");
+    } else {
+        Serial.println("API Key retrieved from NVS.");
     }
 
-    File file = SPIFFS.open("/apikey.txt", FILE_READ);
-    if (!file) {
-        Serial.println("No API Key stored.");
-        return "";
-    }
-
-    String apiKey = file.readStringUntil('\n');
-    file.close();
     return apiKey;
 }
 

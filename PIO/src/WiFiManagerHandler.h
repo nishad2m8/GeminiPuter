@@ -4,8 +4,8 @@
 #include <WiFi.h>
 #include <WiFiManager.h>
 #include <ESPAsyncWebServer.h>
-#include <SPIFFS.h>
-#include <Arduino.h>  // Ensure String and Serial are defined
+#include <Preferences.h>
+#include <Arduino.h>
 
 enum class UIScreen {
     LOADING,
@@ -20,6 +20,7 @@ extern UIScreen nextScreen;
 // Declare the global flags as extern
 extern volatile bool wifiConnectedFlag;
 extern volatile bool configPortalStartedFlag;
+extern Preferences preferences;
 extern volatile bool apiKeySavedFlag;
 extern const char* configPortalSSID;
 

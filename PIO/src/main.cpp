@@ -2,12 +2,13 @@
 #include <lvgl.h>
 #include <ui.h>
 #include <ArduinoJson.h>
-#include <SPIFFS.h>
+#include <Preferences.h>
 #include "WiFiManagerHandler.h"
 #include "GeminiChat.h"
 #include <WiFiManager.h>
 #include <algorithm> 
 
+// Preferences preferences;
 GeminiChat geminiChat;
 
 UIScreen currentScreen = UIScreen::LOADING;
@@ -17,6 +18,11 @@ UIScreen nextScreen = UIScreen::NONE;
 volatile bool wifiConnectedFlag = false;
 volatile bool configPortalStartedFlag = false;
 volatile bool apiKeySavedFlag = false; 
+bool wifiConfigMessagePrinted = false;
+
+unsigned long wifiConnectStartTime = 0;
+const unsigned long wifiConnectTimeout = 10000;
+
 
 unsigned long screenStartTime = 0;
 bool statusScreenChecked = false;
@@ -110,10 +116,6 @@ void setup() {
 
     lvgl_setup();
 
-    if (!SPIFFS.begin(true)) {
-        // updateStatus("Error initializing SPIFFS.");
-    }
-
     Serial.println("Creating LVGL tasks...");
     xTaskCreatePinnedToCore(lv_tick_task, "lv_tick_task", 4096, NULL, 1, NULL, 1);
     xTaskCreatePinnedToCore(lvgl_task, "lvgl_task", 8192, NULL, 1, &lvglTaskHandle, 1);
@@ -128,7 +130,7 @@ void setup() {
 
     String storedApiKey = getStoredApiKey();
     if (!storedApiKey.isEmpty()) {
-        // updateStatus("Loaded API Key from storage.");
+        // updateStatus("Loaded API Key from NVS.");
         geminiChat.setApiKey(storedApiKey);
     } else {
         // updateStatus("No API Key stored. Connect to WebServer to configure.");
@@ -213,16 +215,24 @@ void handleStatusScreenLogic() {
 
     // Step 1: Check if Wi-Fi is connected
     if (WiFi.status() != WL_CONNECTED && !wifiConnectedFlag) {
-        // updateStatus("No Wi-Fi connection. Starting setup portal...");
-        void setupWiFiManager();
-        wifiConfigured = true;
-        updateStatus("Connect to \n\"" + String(configPortalSSID) + "\"\nto configure Wi-Fi.");
-        // delay(2000);
+        if (!wifiConfigMessagePrinted) {
+            updateStatus("Connecting...");
+            delay(2000);
+
+            // Print config message and start connection attempt time
+            updateStatus("Connect to \n\"" + String(configPortalSSID) + "\"\nto configure Wi-Fi.");
+            wifiConfigMessagePrinted = true;
+            wifiConnectStartTime = millis();
+        }
+
         return;
-    } else if (WiFi.status() == WL_CONNECTED && !wifiConnected) {
+    } 
+    else if (WiFi.status() == WL_CONNECTED && !wifiConnected) {
+        // When connected, update the status and reset relevant flags
         updateStatus("Wi-Fi connected.");
-        delay(2000);
         wifiConnected = true;
+        wifiConfigMessagePrinted = false;
+        delay(2000);
     }
 
     // Step 2: Check API Key configuration only if Wi-Fi is connected
@@ -362,26 +372,20 @@ void resetCredentialsAndRestart() {
     WiFi.disconnect(true, true);  // true, true forces credentials deletion
     delay(1000);  // Allow time for Wi-Fi stack to handle disconnection
 
-    // Initialize SPIFFS and delete the API key if it exists
-    if (SPIFFS.begin(true)) {
-        if (SPIFFS.exists("/apikey.txt")) {
-            SPIFFS.remove("/apikey.txt");
-            Serial.println("API Key deleted from SPIFFS.");
-        } else {
-            Serial.println("No API Key found in SPIFFS.");
-        }
-        SPIFFS.end();  // Close SPIFFS after use
-    } else {
-        Serial.println("Failed to initialize SPIFFS.");
-    }
+    // Delete the API key from NVS
+    preferences.begin("config", false);
+    preferences.remove("apikey");
+    preferences.end();
+    Serial.println("API Key deleted from NVS.");
 
     // Provide user feedback and restart
-    lv_label_set_text(ui_Label_info, "Credentials reset !");
+    lv_label_set_text(ui_Label_info, "Credentials reset!");
     delay(1000);
     lv_label_set_text(ui_Label_info, "Restarting...");
     delay(2000);  // Allow message to be visible before restart
     ESP.restart();  // Restart the device
 }
+
 
 void handleEnterKey() {
     const char *inputText = lv_textarea_get_text(ui_TextArea_chat_input);
