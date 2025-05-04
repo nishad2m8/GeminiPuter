@@ -112,7 +112,7 @@ String GeminiChat::sendMessage(const String &message) {
                     // Clean the response by removing unwanted characters
                     textResponse = cleanResponse(textResponse);
                     
-                    const int maxResponseLength = 500;
+                    const int maxResponseLength = 50000;
                     if (textResponse.length() > maxResponseLength) {
                         textResponse = textResponse.substring(0, maxResponseLength) + "...";
                     }
