@@ -241,8 +241,10 @@ void handleStatusScreenLogic() {
 
     if (apiKey.isEmpty() && !apiKeyConfigured) {
         updateStatus("Set API key at\n\"" + ipAddress + "\"\nRestart if fails.");
-        startWebServer(); // Ensure routes and handlers are initialized here
-        webServerStarted = true;  // Only start once
+        if (!webServerStarted) {
+            startWebServer(); // Ensure routes and handlers are initialized once
+            webServerStarted = true;
+        }
         delay(2000);
         return;
     } else if (!apiKey.isEmpty()) {

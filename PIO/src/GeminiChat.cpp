@@ -64,7 +64,10 @@ String GeminiChat::sendMessage(const String &message) {
 
     HTTPClient https;
     https.setTimeout(10000);
-    String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + _apiKey;
+    
+    // Updated: switched from deprecated Gemini 1.5 Flash to Gemma 3 1B (free text model).
+    // String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + _apiKey;
+    String url = "https://generativelanguage.googleapis.com/v1beta/models/gemma-3-1b-it:generateContent?key=" + _apiKey;
 
     if (!https.begin(client, url)) {
         Serial.println("Failed to connect to Gemini API.");
